@@ -59,7 +59,7 @@ export default async function handler(req, res) {
   let vectorSize;
   try {
     const embedRes = await openai.embeddings.create({
-      model: 'text-embedding-ada-002',
+      model: 'text-embedding-3-small',
       input: chunks[0],
     });
     vectorSize = embedRes.data[0].embedding.length;

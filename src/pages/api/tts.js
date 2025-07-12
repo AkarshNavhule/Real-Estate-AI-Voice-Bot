@@ -8,20 +8,24 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { text } = req.body;        // use req.body, not req.json()
+  const { text, voice } = req.body;
   if (!text) {
     return res.status(400).json({ error: "Missing text field" });
   }
 
+  // Only allow official OpenAI voices
+  const allowedVoices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
+  const selectedVoice = allowedVoices.includes(voice) ? voice : "nova";
+
   try {
     const response = await openai.audio.speech.create({
-      model: "tts-1",     // your chosen TTS model
-      voice: "nova",      // e.g. 'nova' for a female‑sounding voice
+      model: "tts-1",
+      voice: selectedVoice,
       input: text,
       format: "mp3",
     });
 
-    // The SDK returns a ReadableStream, convert to buffer
+    // Convert the ReadableStream to a Buffer
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 

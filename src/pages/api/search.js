@@ -18,21 +18,39 @@ export default async function handler(req, res) {
   console.log('[api/search] User text:', userText);
 
   try {
-    // 1️⃣ Refine prompt
     const refine = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4.1-nano',
       messages: [
-        { role: 'system', content: 'You are a prompt engineer. Rewrite the user request into a concise semantic search query for a real-estate vector database.' },
+        {
+          role: 'system',
+          content: `
+    You are an expert real-estate prompt engineer.
+    Your task is to rewrite the user's request into a highly specific, detailed, and clear semantic search query that is optimized for a real-estate property vector database.
+    
+    Make sure to:
+    - include the property type (e.g., apartment, villa, plot, office space) if implied or stated
+    - include the location (city, area, neighborhood) if implied or stated
+    - include the price range or budget if mentioned
+    - include the number of bedrooms/bathrooms or size if applicable
+    - include any special features or amenities mentioned (e.g., swimming pool, parking, furnished)
+    
+    Keep the query natural and descriptive but as specific as possible to retrieve accurate matches.
+    
+    Do not invent information. Only expand on what is logically implied or explicitly stated by the user.
+        `.trim(),
+        },
         { role: 'user', content: userText },
       ],
       temperature: 0.2,
     });
+    
     const searchPrompt = refine.choices[0].message.content.trim();
     console.log('[api/search] Search prompt:', searchPrompt);
+    
 
     // 2️⃣ Embed & query Qdrant
     const embed = await openai.embeddings.create({
-      model: 'text-embedding-ada-002',
+      model: 'text-embedding-3-small',
       input: searchPrompt,
     });
     const vector = embed.data[0].embedding;
@@ -42,7 +60,7 @@ export default async function handler(req, res) {
     );
     const matches = qr.data.result.map(m => m.payload.text);
     console.log('[api/search] Matches:', matches.length);
-    
+
     // 3️⃣ Compose chat history context
     const contextMessages = [
       {
@@ -67,7 +85,7 @@ export default async function handler(req, res) {
 
     // 4️⃣ Get final reply
     const reply = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4.1-mini',
       messages: contextMessages,
       temperature: 0.7,
     });
