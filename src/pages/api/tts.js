@@ -1,0 +1,38 @@
+// /pages/api/tts.js
+import OpenAI from "openai";
+
+const openai = new OpenAI();
+
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  const { text, voice } = req.body;
+  if (!text) {
+    return res.status(400).json({ error: "Missing text field" });
+  }
+
+  // Only allow official OpenAI voices
+  const allowedVoices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
+  const selectedVoice = allowedVoices.includes(voice) ? voice : "nova";
+
+  try {
+    const response = await openai.audio.speech.create({
+      model: "tts-1",
+      voice: selectedVoice,
+      input: text,
+      format: "mp3",
+    });
+
+    // Convert the ReadableStream to a Buffer
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.send(buffer);
+  } catch (err) {
+    console.error("[api/tts] Error:", err);
+    res.status(500).json({ error: "TTS synthesis failed" });
+  }
+}
